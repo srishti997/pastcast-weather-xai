@@ -1,0 +1,15 @@
+flask
+flask-cors
+requests
+pandas
+wikipedia
+python-dotenv
+
+transformers==4.46.1
+sentencepiece
+sacremoses
+torch==2.9.1
+
+accelerate
+
+duckduckgo-search
