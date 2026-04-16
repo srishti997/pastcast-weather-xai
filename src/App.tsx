@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import Header from './components/Header';
 import WeatherForm from './components/WeatherForm';
 import WeatherResults from './components/WeatherResults';
@@ -12,11 +12,13 @@ import LoadingScreen from './components/LoadingScreen';
 import { LocationInput, WeatherDataV2 } from './types/weather';
 import { predictExplainableWeather } from './services/xaiWeatherService';
 
+type DatasetMode = 'IMD' | 'Global' | 'Combined';
+
 function App() {
   const [weatherData, setWeatherData] = useState<WeatherDataV2 | null>(null);
   const [comparisonData, setComparisonData] = useState<any>(null);
   const [showComparison, setShowComparison] = useState(false);
-  const [activeTab, setActiveTab] = useState('weather');
+  const [activeTab, setActiveTab] = useState<'weather' | 'global' | 'comparison' | 'chat'>('weather');
   const [isLoading, setIsLoading] = useState(false);
   const [isAppLoading, setIsAppLoading] = useState(true);
   const [showWeatherHighlight, setShowWeatherHighlight] = useState(false);
@@ -27,7 +29,10 @@ function App() {
         setIsAppLoading(false);
         setActiveTab('weather');
         setShowWeatherHighlight(true);
-        setTimeout(() => setShowWeatherHighlight(false), 2000);
+
+        setTimeout(() => {
+          setShowWeatherHighlight(false);
+        }, 2000);
       }
     }, 10000);
 
@@ -60,14 +65,17 @@ function App() {
     setIsAppLoading(false);
     setActiveTab('weather');
     setShowWeatherHighlight(true);
-    setTimeout(() => setShowWeatherHighlight(false), 2000);
+
+    setTimeout(() => {
+      setShowWeatherHighlight(false);
+    }, 2000);
   };
 
   const handleWeatherSubmit = async (
     location: LocationInput,
     startDate: string,
     endDate?: string,
-    datasetMode?: 'IMD' | 'Global' | 'Combined'
+    datasetMode?: DatasetMode
   ) => {
     setIsLoading(true);
 
@@ -91,6 +99,7 @@ function App() {
 
       setWeatherData(data);
       setShowComparison(false);
+      setActiveTab('weather');
     } catch (error) {
       console.error('Error fetching explainable weather data:', error);
       alert('Failed to fetch explainable weather prediction.');
@@ -103,9 +112,10 @@ function App() {
     locations: LocationInput[],
     startDate: string,
     endDate?: string,
-    datasetMode?: 'IMD' | 'Global' | 'Combined'
+    datasetMode?: DatasetMode
   ) => {
     setIsLoading(true);
+
     try {
       const comparisonPromises = locations.map(async (location) => {
         const response = await fetch('http://localhost:8000/weather/probability', {
@@ -151,6 +161,7 @@ function App() {
 
       setComparisonData(builtComparisonData);
       setShowComparison(true);
+      setActiveTab('comparison');
     } catch (error) {
       console.error('Error fetching comparison data:', error);
       alert('Failed to fetch comparison data. Please try again.');
@@ -169,16 +180,17 @@ function App() {
 
       results.forEach((result, index) => {
         const prob = result.probabilities[condition]?.probability;
+
         if (prob !== null && prob !== undefined) {
           if (condition === 'good_weather') {
             if (prob > bestValue) {
               bestValue = prob;
-              bestLocation = result.location.city_name || `Location ${index + 1}`;
+              bestLocation = result.location?.city_name || `Location ${index + 1}`;
             }
           } else {
             if (prob < bestValue) {
               bestValue = prob;
-              bestLocation = result.location.city_name || `Location ${index + 1}`;
+              bestLocation = result.location?.city_name || `Location ${index + 1}`;
             }
           }
         }
@@ -202,16 +214,17 @@ function App() {
 
       results.forEach((result, index) => {
         const prob = result.probabilities[condition]?.probability;
+
         if (prob !== null && prob !== undefined) {
           if (condition === 'good_weather') {
             if (prob < worstValue) {
               worstValue = prob;
-              worstLocation = result.location.city_name || `Location ${index + 1}`;
+              worstLocation = result.location?.city_name || `Location ${index + 1}`;
             }
           } else {
             if (prob > worstValue) {
               worstValue = prob;
-              worstLocation = result.location.city_name || `Location ${index + 1}`;
+              worstLocation = result.location?.city_name || `Location ${index + 1}`;
             }
           }
         }
@@ -227,12 +240,15 @@ function App() {
 
   const calculateOverallRisk = (results: any[]) => {
     const riskLevels = results.map((result) => result.probabilities.summary.risk_level);
+
     const riskCounts = riskLevels.reduce((acc, risk) => {
       acc[risk] = (acc[risk] || 0) + 1;
       return acc;
     }, {} as { [key: string]: number });
 
-    return Object.keys(riskCounts).reduce((a, b) => (riskCounts[a] > riskCounts[b] ? a : b));
+    return Object.keys(riskCounts).reduce((a, b) =>
+      riskCounts[a] > riskCounts[b] ? a : b
+    );
   };
 
   if (isAppLoading) {
@@ -305,11 +321,18 @@ function App() {
                 <div className="flex items-center space-x-3">
                   <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-full flex items-center justify-center">
                     <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                      />
                     </svg>
                   </div>
                   <div>
-                    <h3 className="text-white font-semibold text-lg">Welcome to PastCast Weather Forecast!</h3>
+                    <h3 className="text-white font-semibold text-lg">
+                      Welcome to PastCast Weather Forecast!
+                    </h3>
                     <p className="text-white/80 text-sm">
                       Get historical weather probability data for any location and date range.
                     </p>
@@ -330,7 +353,12 @@ function App() {
                   <div className="text-center text-white/70 py-12">
                     <div className="mb-4">
                       <svg className="w-16 h-16 mx-auto text-blue-400/50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.001 4.001 0 003 15z" />
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={1}
+                          d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.001 4.001 0 003 15z"
+                        />
                       </svg>
                     </div>
                     <p className="text-lg font-medium">Enter location and date to get weather forecast</p>

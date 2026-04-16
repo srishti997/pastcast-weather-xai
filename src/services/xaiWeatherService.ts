@@ -20,18 +20,26 @@ interface PredictRequest {
 export async function predictExplainableWeather(
   payload: PredictRequest
 ): Promise<WeatherDataV2> {
-  const response = await fetch('http://localhost:8000/api/v2/predict', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(payload),
-  });
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 30000);
 
-  if (!response.ok) {
-    const text = await response.text();
-    throw new Error(`Failed to fetch explainable weather prediction: ${text}`);
+  try {
+    const response = await fetch('http://localhost:8000/api/v2/predict', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(payload),
+      signal: controller.signal,
+    });
+
+    if (!response.ok) {
+      const text = await response.text();
+      throw new Error(`Failed to fetch explainable weather prediction: ${text}`);
+    }
+
+    return response.json();
+  } finally {
+    clearTimeout(timeout);
   }
-
-  return response.json();
 }
